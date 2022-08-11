@@ -1,4 +1,4 @@
-package iso9660_test
+package iso9660
 
 /*
  These tests the exported functions
@@ -15,7 +15,6 @@ import (
 	"testing"
 
 	"github.com/diskfs/go-diskfs/filesystem"
-	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 func getOpenMode(mode int) string {
@@ -34,15 +33,15 @@ func getOpenMode(mode int) string {
 	return strings.Join(modes, "|")
 }
 
-func getValidIso9660FSWorkspace() (*iso9660.FileSystem, error) {
+func getValidIso9660FSWorkspace() (*FileSystem, error) {
 	// create the filesystem
 	f, err := tmpIso9660File()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create iso9660 tmpfile: %v", err)
 	}
-	return iso9660.Create(f, 0, 0, 2048, "")
+	return Create(f, 0, 0, 2048, "")
 }
-func getValidIso9660FSUserWorkspace() (*iso9660.FileSystem, error) {
+func getValidIso9660FSUserWorkspace() (*FileSystem, error) {
 	f, err := tmpIso9660File()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create iso9660 tmpfile: %v", err)
@@ -51,21 +50,21 @@ func getValidIso9660FSUserWorkspace() (*iso9660.FileSystem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create iso9660 tmpfile: %v", err)
 	}
-	return iso9660.Create(f, 0, 0, 2048, dir)
+	return Create(f, 0, 0, 2048, dir)
 }
-func getValidIso9660FSReadOnly() (*iso9660.FileSystem, error) {
-	f, err := os.Open(iso9660.ISO9660File)
+func getValidIso9660FSReadOnly() (*FileSystem, error) {
+	f, err := os.Open(ISO9660File)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read iso9660 testfile %s: %v", iso9660.ISO9660File, err)
+		return nil, fmt.Errorf("Failed to read iso9660 testfile %s: %v", ISO9660File, err)
 	}
-	return iso9660.Read(f, 0, 0, 2048)
+	return Read(f, 0, 0, 2048)
 }
-func getValidRockRidgeFSReadOnly() (*iso9660.FileSystem, error) {
-	f, err := os.Open(iso9660.RockRidgeFile)
+func getValidRockRidgeFSReadOnly() (*FileSystem, error) {
+	f, err := os.Open(RockRidgeFile)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read iso9660 testfile %s: %v", iso9660.RockRidgeFile, err)
+		return nil, fmt.Errorf("Failed to read iso9660 testfile %s: %v", RockRidgeFile, err)
 	}
-	return iso9660.Read(f, 0, 0, 2048)
+	return Read(f, 0, 0, 2048)
 }
 
 func tmpIso9660File() (*os.File, error) {
@@ -78,7 +77,7 @@ func tmpIso9660File() (*os.File, error) {
 }
 
 func TestISO9660Type(t *testing.T) {
-	fs := &iso9660.FileSystem{}
+	fs := &FileSystem{}
 	fstype := fs.Type()
 	expected := filesystem.TypeISO9660
 	if fstype != expected {
@@ -104,7 +103,7 @@ func TestIso9660Mkdir(t *testing.T) {
 		}
 		existPath := "/abc"
 		tests := []struct {
-			fs   *iso9660.FileSystem
+			fs   *FileSystem
 			path string
 			err  error
 		}{
@@ -159,18 +158,18 @@ func TestIso9660Create(t *testing.T) {
 	tests := []struct {
 		blocksize int64
 		filesize  int64
-		fs        *iso9660.FileSystem
+		fs        *FileSystem
 		err       error
 		workdir   string
 	}{
 		{500, 6000, nil, fmt.Errorf("blocksize for ISO9660 must be"), ""},
 		{513, 6000, nil, fmt.Errorf("blocksize for ISO9660 must be"), ""},
-		{2048, 2048*iso9660.MaxBlocks + 1, nil, fmt.Errorf("requested size is larger than maximum allowed ISO9660 size"), ""},
-		{2048, 32*iso9660.KB + 3*2048 - 1, nil, fmt.Errorf("requested size is smaller than minimum allowed ISO9660 size"), ""},
+		{2048, 2048*MaxBlocks + 1, nil, fmt.Errorf("requested size is larger than maximum allowed ISO9660 size"), ""},
+		{2048, 32*KB + 3*2048 - 1, nil, fmt.Errorf("requested size is smaller than minimum allowed ISO9660 size"), ""},
 		{2048, 10000000, nil, fmt.Errorf("provided workspace is not a directory"), testFile.Name()},
 		{2048, 10000000, nil, fmt.Errorf("could not stat working directory"), missingDir},
-		{2048, 10000000, &iso9660.FileSystem{}, nil, testDir},
-		{2048, 10000000, &iso9660.FileSystem{}, nil, ""},
+		{2048, 10000000, &FileSystem{}, nil, testDir},
+		{2048, 10000000, &FileSystem{}, nil, ""},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -180,7 +179,7 @@ func TestIso9660Create(t *testing.T) {
 			if err != nil {
 				t.Errorf("Failed to create iso9660 tmpfile: %v", err)
 			}
-			fs, err := iso9660.Create(f, tt.filesize, 0, tt.blocksize, tt.workdir)
+			fs, err := Create(f, tt.filesize, 0, tt.blocksize, tt.workdir)
 			defer os.Remove(f.Name())
 			switch {
 			case (err == nil && tt.err != nil) || (err != nil && tt.err == nil) || (err != nil && tt.err != nil && !strings.HasPrefix(err.Error(), tt.err.Error())):
@@ -204,25 +203,25 @@ func TestISO9660Read(t *testing.T) {
 		blocksize  int64
 		filesize   int64
 		bytechange int64
-		fs         *iso9660.FileSystem
+		fs         *FileSystem
 		err        error
 	}{
 		{500, 6000, -1, nil, fmt.Errorf("blocksize for ISO9660 must be")},
 		{513, 6000, -1, nil, fmt.Errorf("blocksize for ISO9660 must be")},
-		{512, iso9660.MaxBlocks*2048 + 10000, -1, nil, fmt.Errorf("blocksize for ISO9660 must be")},
-		{2048, 10000000, -1, &iso9660.FileSystem{}, nil},
+		{512, MaxBlocks*2048 + 10000, -1, nil, fmt.Errorf("blocksize for ISO9660 must be")},
+		{2048, 10000000, -1, &FileSystem{}, nil},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(fmt.Sprintf("blocksize %d filesize %d", tt.blocksize, tt.filesize), func(t *testing.T) {
 			// get a temporary working file
-			f, err := os.Open(iso9660.ISO9660File)
+			f, err := os.Open(ISO9660File)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer f.Close()
 			// create the filesystem
-			fs, err := iso9660.Read(f, tt.filesize, 0, tt.blocksize)
+			fs, err := Read(f, tt.filesize, 0, tt.blocksize)
 			switch {
 			case (err == nil && tt.err != nil) || (err != nil && tt.err == nil) || (err != nil && tt.err != nil && !strings.HasPrefix(err.Error(), tt.err.Error())):
 				t.Errorf("read(%s, %d, %d, %d): mismatched errors, actual %v expected %v", f.Name(), tt.filesize, 0, tt.blocksize, err, tt.err)
@@ -238,7 +237,7 @@ func TestISO9660Read(t *testing.T) {
 
 func TestIso9660ReadDir(t *testing.T) {
 	type testList struct {
-		fs    *iso9660.FileSystem
+		fs    *FileSystem
 		path  string
 		count int
 		first string
@@ -338,7 +337,7 @@ func TestIso9660OpenFile(t *testing.T) {
 
 	t.Run("read", func(t *testing.T) {
 		//nolint:thelper // this is not a helper function
-		runTests := func(t *testing.T, fs *iso9660.FileSystem, tests []testStruct) {
+		runTests := func(t *testing.T, fs *FileSystem, tests []testStruct) {
 			for _, tt := range tests {
 				header := fmt.Sprintf("OpenFile(%s, %s)", tt.path, getOpenMode(tt.mode))
 				reader, err := fs.OpenFile(tt.path, tt.mode)
@@ -479,7 +478,7 @@ func TestIso9660OpenFile(t *testing.T) {
 				{editFile, os.O_APPEND | os.O_RDWR, true, "More", "INITIAL DATA GALORE\nMore", nil},
 			}
 			for i, tt := range tests {
-				for _, fs := range []*iso9660.FileSystem{fsTemp, fsUser} {
+				for _, fs := range []*FileSystem{fsTemp, fsUser} {
 					filepath := path.Join(fs.Workspace(), tt.path)
 					// remove any old file if it exists - ignore errors
 					_ = os.Remove(filepath)

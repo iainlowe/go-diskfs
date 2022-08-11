@@ -1,4 +1,4 @@
-package gpt_test
+package gpt
 
 import (
 	"bufio"
@@ -14,14 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/diskfs/go-diskfs/partition/gpt"
 	"github.com/diskfs/go-diskfs/testhelper"
 )
 
 const (
-	gptFile = "./testdata/gpt.img"
-	gptSize = 128 * 128
-	tenMB   = 10 * 1024 * 1024
+	tenMB = 10 * 1024 * 1024
 )
 
 var (

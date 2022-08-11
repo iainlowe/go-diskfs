@@ -1,4 +1,4 @@
-module github.com/iainlowe/go-diskfs
+module github.com/diskfs/go-diskfs
 
 go 1.16
 

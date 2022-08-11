@@ -1,4 +1,4 @@
-package mbr_test
+package mbr
 
 import (
 	"bufio"
@@ -14,13 +14,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/diskfs/go-diskfs/testhelper"
 )
 
 const (
-	mbrFile = "./testdata/mbr.img"
-	tenMB   = 10 * 1024 * 1024
+	tenMB = 10 * 1024 * 1024
 )
 
 var (
@@ -69,16 +67,16 @@ func compareMBRBytes(b1, b2 []byte) bool {
 		return false
 	}
 	// need to compare each of the partition arrays
-	if !mbr.PartitionEqualBytes(b1[0:16], b2[0:16]) {
+	if !PartitionEqualBytes(b1[0:16], b2[0:16]) {
 		return false
 	}
-	if !mbr.PartitionEqualBytes(b1[16:32], b2[16:32]) {
+	if !PartitionEqualBytes(b1[16:32], b2[16:32]) {
 		return false
 	}
-	if !mbr.PartitionEqualBytes(b1[32:48], b2[32:48]) {
+	if !PartitionEqualBytes(b1[32:48], b2[32:48]) {
 		return false
 	}
-	if !mbr.PartitionEqualBytes(b1[48:64], b2[48:64]) {
+	if !PartitionEqualBytes(b1[48:64], b2[48:64]) {
 		return false
 	}
 	if !bytes.Equal(b1[64:66], b2[64:66]) {
@@ -89,7 +87,7 @@ func compareMBRBytes(b1, b2 []byte) bool {
 
 func TestTableType(t *testing.T) {
 	expected := "mbr"
-	table := mbr.GetValidTable()
+	table := GetValidTable()
 	tableType := table.Type()
 	if tableType != expected {
 		t.Errorf("Type() returned unexpected table type, actual %s expected %s", tableType, expected)
@@ -104,7 +102,7 @@ func TestTableRead(t *testing.T) {
 				return 0, errors.New(expected)
 			},
 		}
-		table, err := mbr.Read(f, 512, 512)
+		table, err := Read(f, 512, 512)
 		if table != nil {
 			t.Errorf("returned table instead of nil")
 		}
@@ -123,7 +121,7 @@ func TestTableRead(t *testing.T) {
 				return size, nil
 			},
 		}
-		table, err := mbr.Read(f, 512, 512)
+		table, err := Read(f, 512, 512)
 		if table != nil {
 			t.Errorf("returned table instead of nil")
 		}
@@ -140,14 +138,14 @@ func TestTableRead(t *testing.T) {
 			t.Fatalf("error opening file %s to read: %v", mbrFile, err)
 		}
 		defer f.Close()
-		table, err := mbr.Read(f, 512, 512)
+		table, err := Read(f, 512, 512)
 		if err != nil {
 			t.Errorf("returned error %v instead of nil", err)
 		}
 		if table == nil {
 			t.Errorf("returned nil instead of table")
 		}
-		expected := mbr.GetValidTable()
+		expected := GetValidTable()
 		if table == nil && expected != nil || !table.Equal(expected) {
 			t.Errorf("actual table was %v instead of expected %v", table, expected)
 		}
@@ -155,7 +153,7 @@ func TestTableRead(t *testing.T) {
 }
 func TestTableWrite(t *testing.T) {
 	t.Run("error writing file", func(t *testing.T) {
-		table := mbr.GetValidTable()
+		table := GetValidTable()
 		expected := "error writing partition table to disk"
 		f := &testhelper.FileImpl{
 			Writer: func(b []byte, offset int64) (int, error) {
@@ -171,7 +169,7 @@ func TestTableWrite(t *testing.T) {
 		}
 	})
 	t.Run("insufficient data written", func(t *testing.T) {
-		table := mbr.GetValidTable()
+		table := GetValidTable()
 		var size int
 		f := &testhelper.FileImpl{
 			Writer: func(b []byte, offset int64) (int, error) {
@@ -189,7 +187,7 @@ func TestTableWrite(t *testing.T) {
 		}
 	})
 	t.Run("successful write", func(t *testing.T) {
-		table := mbr.GetValidTable()
+		table := GetValidTable()
 		mbrFileHandle, err := os.Open(mbrFile)
 		if err != nil {
 			t.Fatalf("error opening file %s: %v", mbrFile, err)
@@ -263,11 +261,11 @@ func TestTableWrite(t *testing.T) {
 		partitionStart := uint32(2048)
 		// make it a 5MB partition
 		partitionSize := uint32(5000)
-		table := &mbr.Table{
+		table := &Table{
 			LogicalSectorSize:  sectorSize,
 			PhysicalSectorSize: sectorSize,
-			Partitions: []*mbr.Partition{
-				{Bootable: true, Type: mbr.Linux, Start: partitionStart, Size: partitionSize},
+			Partitions: []*Partition{
+				{Bootable: true, Type: Linux, Start: partitionStart, Size: partitionSize},
 			},
 		}
 
@@ -331,8 +329,8 @@ func TestTableWrite(t *testing.T) {
 			}
 			// skip partitionParts[6] ; we do not look at the size in bytes,
 			// partition type code should match
-			if partitionParts[7] != fmt.Sprintf("%x", mbr.Linux) {
-				t.Errorf("mismatched partition type, actual %s, expected %x", partitionParts[7], mbr.Linux)
+			if partitionParts[7] != fmt.Sprintf("%x", Linux) {
+				t.Errorf("mismatched partition type, actual %s, expected %x", partitionParts[7], Linux)
 			}
 			// partition type name should match
 			if partitionParts[8] != "Linux" {
@@ -342,7 +340,7 @@ func TestTableWrite(t *testing.T) {
 	})
 }
 func TestGetPartitionSize(t *testing.T) {
-	table := mbr.GetValidTable()
+	table := GetValidTable()
 	maxPart := len(table.Partitions)
 	request := maxPart - 1
 	size := table.Partitions[request].GetSize()
@@ -352,7 +350,7 @@ func TestGetPartitionSize(t *testing.T) {
 	}
 }
 func TestGetPartitionStart(t *testing.T) {
-	table := mbr.GetValidTable()
+	table := GetValidTable()
 	maxPart := len(table.Partitions)
 	request := maxPart - 1
 	start := table.Partitions[request].GetStart()
@@ -362,7 +360,7 @@ func TestGetPartitionStart(t *testing.T) {
 	}
 }
 func TestReadPartitionContents(t *testing.T) {
-	table := mbr.GetValidTable()
+	table := GetValidTable()
 	maxPart := len(table.Partitions)
 	request := maxPart - 1
 	var b bytes.Buffer
@@ -391,7 +389,7 @@ func TestReadPartitionContents(t *testing.T) {
 	}
 }
 func TestWritePartitionContents(t *testing.T) {
-	table := mbr.GetValidTable()
+	table := GetValidTable()
 	request := 0
 	size := table.Partitions[request].Size * uint32(table.LogicalSectorSize)
 	b := make([]byte, size)

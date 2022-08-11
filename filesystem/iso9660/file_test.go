@@ -1,16 +1,14 @@
-package iso9660_test
+package iso9660
 
 import (
 	"io"
 	"testing"
-
-	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 )
 
 func TestFileRead(t *testing.T) {
 	// pretty simple: never should be able to write as it is a read-only filesystem
 	// we use
-	f, content := iso9660.GetTestFile(t)
+	f, content := GetTestFile(t)
 
 	b := make([]byte, 20)
 	read, err := f.Read(b)
@@ -27,7 +25,7 @@ func TestFileRead(t *testing.T) {
 }
 
 func TestLargeFileCopy(t *testing.T) {
-	f, size := iso9660.GetLargeTestFile(t)
+	f, size := GetLargeTestFile(t)
 
 	copied, err := io.Copy(io.Discard, f)
 	if err != nil {
@@ -40,7 +38,7 @@ func TestLargeFileCopy(t *testing.T) {
 
 func TestFileWrite(t *testing.T) {
 	// pretty simple: never should be able to write as it is a read-only filesystem
-	f := &iso9660.File{}
+	f := &File{}
 	b := make([]byte, 8)
 	written, err := f.Write(b)
 	if err == nil {

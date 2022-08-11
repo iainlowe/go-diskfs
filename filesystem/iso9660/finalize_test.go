@@ -1,4 +1,4 @@
-package iso9660_test
+package iso9660
 
 import (
 	"bytes"
@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/diskfs/go-diskfs/filesystem"
-	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/diskfs/go-diskfs/testhelper"
 )
@@ -29,15 +28,15 @@ func TestFinalizeElTorito(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create tmpfile: %v", err)
 	}
-	fs, err := iso9660.Create(f, 0, 0, blocksize, "")
+	fs, err := Create(f, 0, 0, blocksize, "")
 	if err != nil {
-		t.Fatalf("Failed to iso9660.Create: %v", err)
+		t.Fatalf("Failed to Create: %v", err)
 	}
 	var isofile filesystem.File
 	for _, filename := range []string{"/BOOT1.IMG", "/BOOT2.IMG"} {
 		isofile, err = fs.OpenFile(filename, os.O_CREATE|os.O_RDWR)
 		if err != nil {
-			t.Fatalf("Failed to iso9660.OpenFile(%s): %v", filename, err)
+			t.Fatalf("Failed to OpenFile(%s): %v", filename, err)
 		}
 		// create some random data
 		blen := 1024 * 1024
@@ -53,13 +52,13 @@ func TestFinalizeElTorito(t *testing.T) {
 		}
 	}
 
-	err = fs.Finalize(iso9660.FinalizeOptions{ElTorito: &iso9660.ElTorito{
+	err = fs.Finalize(FinalizeOptions{ElTorito: &ElTorito{
 		BootCatalog:     "/BOOT.CAT",
 		HideBootCatalog: false,
-		Platform:        iso9660.EFI,
-		Entries: []*iso9660.ElToritoEntry{
-			{Platform: iso9660.BIOS, Emulation: iso9660.NoEmulation, BootFile: "/BOOT1.IMG", HideBootFile: true, LoadSegment: 0, SystemType: mbr.Fat32LBA},
-			{Platform: iso9660.EFI, Emulation: iso9660.NoEmulation, BootFile: "/BOOT2.IMG", HideBootFile: false, LoadSegment: 0, SystemType: mbr.Fat32LBA},
+		Platform:        EFI,
+		Entries: []*ElToritoEntry{
+			{Platform: BIOS, Emulation: NoEmulation, BootFile: "/BOOT1.IMG", HideBootFile: true, LoadSegment: 0, SystemType: mbr.Fat32LBA},
+			{Platform: EFI, Emulation: NoEmulation, BootFile: "/BOOT2.IMG", HideBootFile: false, LoadSegment: 0, SystemType: mbr.Fat32LBA},
 		},
 	},
 	})
@@ -71,7 +70,7 @@ func TestFinalizeElTorito(t *testing.T) {
 	}
 
 	// now check the contents
-	fs, err = iso9660.Read(f, 0, 0, 2048)
+	fs, err = Read(f, 0, 0, 2048)
 	if err != nil {
 		t.Fatalf("error reading the tmpfile as iso: %v", err)
 	}
@@ -98,6 +97,7 @@ func TestFinalizeElTorito(t *testing.T) {
 }
 
 // full test - create some files, finalize, check the output
+//
 //nolint:gocyclo // we really do not care about the cyclomatic complexity of a test function. Maybe someday we will improve it.
 func TestFinalize9660(t *testing.T) {
 	blocksize := int64(2048)
@@ -107,18 +107,18 @@ func TestFinalize9660(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create tmpfile: %v", err)
 		}
-		fs, err := iso9660.Create(f, 0, 0, blocksize, "")
+		fs, err := Create(f, 0, 0, blocksize, "")
 		if err != nil {
-			t.Fatalf("Failed to iso9660.Create: %v", err)
+			t.Fatalf("Failed to Create: %v", err)
 		}
 		for _, dir := range []string{"/A/B/C/D/E/F/G/H/I/J/K"} {
 			err = fs.Mkdir(dir)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.Mkdir(%s): %v", dir, err)
+				t.Fatalf("Failed to Mkdir(%s): %v", dir, err)
 			}
 		}
 
-		err = fs.Finalize(iso9660.FinalizeOptions{})
+		err = fs.Finalize(FinalizeOptions{})
 		if err == nil {
 			t.Fatal("unexpected lack of error fs.Finalize()", err)
 		}
@@ -129,21 +129,21 @@ func TestFinalize9660(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create tmpfile: %v", err)
 		}
-		fs, err := iso9660.Create(f, 0, 0, blocksize, "")
+		fs, err := Create(f, 0, 0, blocksize, "")
 		if err != nil {
-			t.Fatalf("Failed to iso9660.Create: %v", err)
+			t.Fatalf("Failed to Create: %v", err)
 		}
 		for _, dir := range []string{"/", "/FOO", "/BAR", "/ABC"} {
 			err = fs.Mkdir(dir)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.Mkdir(%s): %v", dir, err)
+				t.Fatalf("Failed to Mkdir(%s): %v", dir, err)
 			}
 		}
 		var isofile filesystem.File
 		for _, filename := range []string{"/BAR/LARGEFILE", "/ABC/LARGEFILE"} {
 			isofile, err = fs.OpenFile(filename, os.O_CREATE|os.O_RDWR)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.OpenFile(%s): %v", filename, err)
+				t.Fatalf("Failed to OpenFile(%s): %v", filename, err)
 			}
 			// create some random data
 			blen := 1024 * 1024
@@ -161,7 +161,7 @@ func TestFinalize9660(t *testing.T) {
 
 		isofile, err = fs.OpenFile("README.MD", os.O_CREATE|os.O_RDWR)
 		if err != nil {
-			t.Fatalf("Failed to iso9660.OpenFile(%s): %v", "README.MD", err)
+			t.Fatalf("Failed to OpenFile(%s): %v", "README.MD", err)
 		}
 		b := []byte("readme\n")
 		if _, err = isofile.Write(b); err != nil {
@@ -174,14 +174,14 @@ func TestFinalize9660(t *testing.T) {
 			contents := []byte(fmt.Sprintf("filename_%d\n", i))
 			isofile, err = fs.OpenFile(filename, os.O_CREATE|os.O_RDWR)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.OpenFile(%s): %v", filename, err)
+				t.Fatalf("Failed to OpenFile(%s): %v", filename, err)
 			}
 			if _, err = isofile.Write(contents); err != nil {
 				t.Fatalf("%d: error writing bytes to tmpfile %s: %v", i, filename, err)
 			}
 		}
 
-		err = fs.Finalize(iso9660.FinalizeOptions{})
+		err = fs.Finalize(FinalizeOptions{})
 		if err != nil {
 			t.Fatal("unexpected error fs.Finalize()", err)
 		}
@@ -196,7 +196,7 @@ func TestFinalize9660(t *testing.T) {
 		}
 
 		// now check the contents
-		fs, err = iso9660.Read(f, 0, 0, 2048)
+		fs, err = Read(f, 0, 0, 2048)
 		if err != nil {
 			t.Fatalf("error reading the tmpfile as iso: %v", err)
 		}
@@ -285,17 +285,17 @@ func TestFinalize9660(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create tmpfile: %v", err)
 		}
-		fs, err := iso9660.Create(f, 0, 0, blocksize, dir)
+		fs, err := Create(f, 0, 0, blocksize, dir)
 		if err != nil {
-			t.Fatalf("Failed to iso9660.Create: %v", err)
+			t.Fatalf("Failed to Create: %v", err)
 		}
-		err = fs.Finalize(iso9660.FinalizeOptions{})
+		err = fs.Finalize(FinalizeOptions{})
 		if err != nil {
 			t.Fatal("unexpected error fs.Finalize()", err)
 		}
 
 		// now check the contents
-		fs, err = iso9660.Read(f, 0, 0, 2048)
+		fs, err = Read(f, 0, 0, 2048)
 		if err != nil {
 			t.Fatalf("error reading the tmpfile as iso: %v", err)
 		}
@@ -344,27 +344,27 @@ func TestFinalizeRockRidge(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create tmpfile: %v", err)
 		}
-		fs, err := iso9660.Create(f, 0, 0, blocksize, "")
+		fs, err := Create(f, 0, 0, blocksize, "")
 		if err != nil {
-			t.Fatalf("Failed to iso9660.Create: %v", err)
+			t.Fatalf("Failed to Create: %v", err)
 		}
 		for _, dir := range []string{"/", "/foo", "/bar", "/abc"} {
 			err = fs.Mkdir(dir)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.Mkdir(%s): %v", dir, err)
+				t.Fatalf("Failed to Mkdir(%s): %v", dir, err)
 			}
 		}
 		// make a deep directory
 		dir := "/deep/a/b/c/d/e/f/g/h/i/j"
 		err = fs.Mkdir(dir)
 		if err != nil {
-			t.Fatalf("Failed to iso9660.Mkdir(%s): %v", dir, err)
+			t.Fatalf("Failed to Mkdir(%s): %v", dir, err)
 		}
 		var isofile filesystem.File
 		for _, filename := range []string{"/bar/largefile", "/abc/largefile"} {
 			isofile, err = fs.OpenFile(filename, os.O_CREATE|os.O_RDWR)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.OpenFile(%s): %v", filename, err)
+				t.Fatalf("Failed to OpenFile(%s): %v", filename, err)
 			}
 			// create some random data
 			blen := 1024 * 1024
@@ -382,7 +382,7 @@ func TestFinalizeRockRidge(t *testing.T) {
 
 		isofile, err = fs.OpenFile("README.md", os.O_CREATE|os.O_RDWR)
 		if err != nil {
-			t.Fatalf("Failed to iso9660.OpenFile(%s): %v", "README.md", err)
+			t.Fatalf("Failed to OpenFile(%s): %v", "README.md", err)
 		}
 		b := []byte("readme\n")
 		if _, err = isofile.Write(b); err != nil {
@@ -395,7 +395,7 @@ func TestFinalizeRockRidge(t *testing.T) {
 			contents := []byte(fmt.Sprintf("filename_%d\n", i))
 			isofile, err = fs.OpenFile(filename, os.O_CREATE|os.O_RDWR)
 			if err != nil {
-				t.Fatalf("Failed to iso9660.OpenFile(%s): %v", filename, err)
+				t.Fatalf("Failed to OpenFile(%s): %v", filename, err)
 			}
 			if _, err = isofile.Write(contents); err != nil {
 				t.Fatalf("%d: error writing bytes to tmpfile %s: %v", i, filename, err)
@@ -404,7 +404,7 @@ func TestFinalizeRockRidge(t *testing.T) {
 
 		workspace := fs.Workspace()
 
-		err = fs.Finalize(iso9660.FinalizeOptions{RockRidge: true})
+		err = fs.Finalize(FinalizeOptions{RockRidge: true})
 		if err != nil {
 			t.Fatal("unexpected error fs.Finalize({RockRidge: true})", err)
 		}
@@ -424,7 +424,7 @@ func TestFinalizeRockRidge(t *testing.T) {
 		}
 
 		// now check the contents
-		fs, err = iso9660.Read(f, 0, 0, 2048)
+		fs, err = Read(f, 0, 0, 2048)
 		if err != nil {
 			t.Fatalf("error reading the tmpfile as iso: %v", err)
 		}

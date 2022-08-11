@@ -1,4 +1,4 @@
-package squashfs_test
+package squashfs
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/diskfs/go-diskfs/filesystem/squashfs"
 	"github.com/diskfs/go-diskfs/testhelper"
 )
 
@@ -47,7 +46,7 @@ func TestFileRead(t *testing.T) {
 
 	t.Run("fragment only", func(t *testing.T) {
 		// stub the file reader
-		f, err := squashfs.GetTestFileSmall(fileImpl, nil)
+		f, err := GetTestFileSmall(fileImpl, nil)
 		if err != nil {
 			t.Fatalf("unable to get small test file: %v", err)
 		}
@@ -67,7 +66,7 @@ func TestFileRead(t *testing.T) {
 	})
 	t.Run("blocks", func(t *testing.T) {
 		// stub the file reader
-		f, err := squashfs.GetTestFileBig(fileImpl, nil)
+		f, err := GetTestFileBig(fileImpl, nil)
 		if err != nil {
 			t.Fatalf("unable to get small test file: %v", err)
 		}
@@ -90,7 +89,7 @@ func TestFileRead(t *testing.T) {
 
 func TestFileWrite(t *testing.T) {
 	// pretty simple: never should be able to write as it is a read-only filesystem
-	f := &squashfs.File{}
+	f := &File{}
 	b := make([]byte, 8)
 	written, err := f.Write(b)
 	if err == nil {
@@ -115,7 +114,7 @@ func TestFileSeek(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		f := squashfs.MakeTestFile(200)
+		f := MakeTestFile(200)
 		offset, err := f.Seek(tt.offset, tt.whence)
 		switch {
 		case (err == nil && tt.err != nil) || (err != nil && tt.err == nil) || (err != nil && tt.err != nil && !strings.HasPrefix(err.Error(), tt.err.Error())):
